@@ -73,7 +73,6 @@ var Protobox = null;
     // DEFAULTS
     
     var defaults = {
-        settings: {
         opacity      : 0,
         overlay      : true,
         loadingImage : '/images/protobox/loading.gif',
@@ -89,7 +88,7 @@ var Protobox = null;
             </tr> \
             <tr> \
               <td class="b"/> \
-              <td class="body"> \
+              <td id="protobox-body"> \
                 <div class="content"> \
                 </div> \
                 <div class="footer"> \
@@ -145,17 +144,17 @@ var Protobox = null;
     //     div: #id
     //   image: blah.extension
     //    ajax: anything else
-    function fillprotoboxFromHref(href, klass) {
+    function fillprotoboxFromHref(s, href, klass) {
 
         // div
         if (href.match(/#/)) {
             var url    = window.location.href.split('#')[0];
             var target = href.replace(url,'');
             if (target == '#') return;
-            $.protobox.reveal($(target).html(), klass);
+            Protobox.reveal($(target).html(), klass);
 
         // image
-        } else if (href.match($.protobox.settings.imageTypesRegexp)) {
+        } else if (href.match(s.imageTypesRegexp)) {
             fillprotoboxFromImage(href, klass);
 
         // ajax
@@ -173,82 +172,87 @@ var Protobox = null;
         image.src = href;
     }
 
-    //NOTE: GOT TO HERE <----------------------------------------------------------------------------------------------------
     function fillprotoboxFromAjax(href, klass) {
-        $.get(href, function(data) { Protobox.reveal(data, klass) });
-    }
-
-    function skipOverlay() {
-        return $.protobox.settings.overlay == false || $.protobox.settings.opacity === null
-    }
-
-    function showOverlay() {
-        if (skipOverlay()) return
-
-        if ($('#protobox_overlay').length == 0)
-        $("body").append('<div id="protobox_overlay" class="protobox_hide"></div>')
-
-        $('#protobox_overlay').hide().addClass("protobox_overlayBG")
-        .css('opacity', $.protobox.settings.opacity)
-        .click(function() { $(document).trigger('close.protobox') })
-        .fadeIn(200)
-        return false
-    }
-
-    function hideOverlay() {
-        if (skipOverlay()) return
-    
-        $('#protobox_overlay').fadeOut(200, function(){
-            $("#protobox_overlay").removeClass("protobox_overlayBG")
-            $("#protobox_overlay").addClass("protobox_hide")
-            $("#protobox_overlay").remove()
+        new Ajax.Request(href, {
+            method: 'GET',
+            onSuccess: function(transport) {
+                Protobox.reveal(transport.responseText, klass);
+            }
         });
+    }
+
+    function skipOverlay(s) {
+        return s.overlay == false || s.opacity === null
+    }
+
+    function showOverlay(s) {
+        if (skipOverlay(s)) return
+
+        if ($('protobox_overlay').childElements.size == 0)
+            $(document.body).insert('<div id="protobox_overlay" class="protobox_hide"></div>');
+
+        $('protobox_overlay').hide()
+            .addClassName("protobox_overlayBG")
+            .setStyle({ 'opacity': s.opacity })
+            .observe('click', function() { 
+                    $(document).fire('protobox:close'); 
+            })
+            .fadeIn(200);
 
         return false;
     }
 
-    // BINDINGS
+    function hideOverlay(s) {
+        if (skipOverlay(s)) return;
 
-    $(document).bind('close.protobox', function() {
-        $(document).unbind('keydown.protobox')
-        $('#protobox').fadeOut(function() {
-            $('#protobox .content').removeClass().addClass('content')
-            hideOverlay()
-            $('#protobox .loading').remove()
-            $(document).trigger('afterClose.protobox')
-        })
-    })
+        $('protobox_overlay').fade(0.02);
+
+        $("protobox_overlay").removeClassName("protobox_overlayBG");
+        $("protobox_overlay").addClassName("protobox_hide");
+        $("protobox_overlay").remove();
+
+        return false;
+    }
+
+
 
     // CLASS DEFINITION
 
     Protobox = Class.create({
         settings: {},
 
-        initialize: function() {
+        initialize: function(s) {
+            this.settings = s;
 
-            if ($.protobox.settings.inited) return true
-            else $.protobox.settings.inited = true
+            if (this.settings.inited) return true;
+            else this.settings.inited = true;
 
-            $(document).trigger('init.protobox')
+            Object.extend(defaults, this.settings);
+            
+            $(document).fire('protobox:init')
 
-            var imageTypes = $.protobox.settings.imageTypes.join('|')
-            $.protobox.settings.imageTypesRegexp = new RegExp('\.(' + imageTypes + ')$', 'i')
+            var imageTypes = this.settings.imageTypes.join('|');
+            this.settings.imageTypesRegexp = new RegExp('\.(' + imageTypes + ')$', 'i');
         
-            if (settings) $.extend($.protobox.settings, settings)
-            $('body').append($.protobox.settings.protoboxHtml)
+            $(document.body).insert(this.settings.protoboxHtml);
         
-            var preload = [ new Image(), new Image() ]
-            preload[0].src = $.protobox.settings.closeImage
-            preload[1].src = $.protobox.settings.loadingImage
+            var preload = [ new Image(), new Image() ];
+            preload[0].src = this.settings.closeImage;
+            preload[1].src = this.settings.loadingImage;
                 
-            $('#protobox').find('.b:first, .bl').each(function() {
-            preload.push(new Image())
-            preload.slice(-1).src = $(this).css('background-image').replace(/url\((.+)\)/, '$1')
-            })
+            // preloading all the background-images
+            $$('#protobox .b:first, #protobox .bl').each(function(elm) {
+                preload.push(new Image());
+                preload.last.src = elm.getStyle('background-image').replace(/url\((.+)\)/, '$1');
+            });
 
-            $('#protobox .close').click($.protobox.close)
-            $('#protobox .close_image').attr('src', $.protobox.settings.closeImage)
+            // TODO: another static here Protobox.close
+            $$('#protobox .close').invoke('observe', 'click', Protobox.close);
+            $$('#protobox .close_image').invoke('writeAttribute', 'src', this.settings.closeImage);
         }
+
+
+    //NOTE: GOT TO HERE <----------------------------------------------------------------------------------------------------
 
         loading: function() {
             init()
@@ -269,23 +273,35 @@ var Protobox = null;
                 return true
             })
             $(document).trigger('loading.protobox')
-        },
-
-        reveal: function(data, klass) {
-            $(document).trigger('beforeReveal.protobox')
-            if (klass) $('#protobox .content').addClass(klass)
-            $('#protobox .content').append(data)
-            $('#protobox .loading').remove()
-            $('#protobox .body').children().fadeIn('normal')
-            $('#protobox').css('left', $(window).width() / 2 - ($('#protobox table').width() / 2))
-            $(document).trigger('reveal.protobox').trigger('afterReveal.protobox')
-        },
-
-        close: function() {
-            $(document).trigger('close.protobox')
-            return false
         }
     }); // end of class def
+
+    // STATIC METHODS
+
+    Protobox.reveal = function(data, klass) {
+        $(document).fire('protobox.beforeReveal');
+        if (klass) $$('#protobox .content').invoke('addClassName', klass);
+        $$('#protobox .content').invoke('insert', data);
+        $$('#protobox .loading').invoke('remove');
+        $$('#protobox .body').children().fadeIn('normal');
+        $('#protobox').css('left', $(window).width() / 2 - ($('#protobox table').width() / 2))
+        $(document).trigger('reveal.protobox').trigger('afterReveal.protobox')
+    }
+
+    Protobox.close = function() {
+        $(document).fire('protobox:close')
+        
+        $(document).stopObserving('protobox:keydown')
+
+        $('protobox').fade();
+
+        $('#protobox .content').writeAttribute('class', 'content');
+        hideOverlay();
+        $$('#protobox .loading').invoke('remove');
+
+        $(document).fire('protobox:afterClose');
+        return false;
+    }
 })(); // end of scope
 
   /*
