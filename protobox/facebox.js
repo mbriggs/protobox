@@ -89,7 +89,7 @@ var Protobox = null;
             <tr> \
               <td class="b"/> \
               <td id="protobox-body"> \
-                <div class="content"> \
+                <div class="protobox-content"> \
                 </div> \
                 <div class="footer"> \
                   <a href="#" class="close"> \
@@ -166,7 +166,6 @@ var Protobox = null;
     function fillprotoboxFromImage(href, klass) {
         var image = new Image();
         image.onload = function() {
-            //todo: add static reveal method
             Protobox.reveal('<div class="image"><img src="' + image.src + '" /></div>', klass);
         }
         image.src = href;
@@ -246,33 +245,31 @@ var Protobox = null;
                 preload.last.src = elm.getStyle('background-image').replace(/url\((.+)\)/, '$1');
             });
 
-            // TODO: another static here Protobox.close
             $$('#protobox .close').invoke('observe', 'click', Protobox.close);
             $$('#protobox .close_image').invoke('writeAttribute', 'src', this.settings.closeImage);
         }
 
 
-    //NOTE: GOT TO HERE <----------------------------------------------------------------------------------------------------
 
         loading: function() {
-            init()
-            if ($('#protobox .loading').length == 1) return true
-                showOverlay()
-    
-            $('#protobox .content').empty()
-            $('#protobox .body').children().hide().end().
-                append('<div class="loading"><img src="'+$.protobox.settings.loadingImage+'"/></div>')
+            init();
+            if ($('protobox-loading')) return true;
+            showOverlay();
 
-            $('#protobox').css({
+            $('protobox-content').childElements.invoke('remove');
+            $('protobox-body').childElements().invoke('hide');
+            $('protobox-body').insert('<div class="loading"><img src="' + this.settings.loadingImage + '"/></div>');
+
+            $('protobox').setStyle({
                 top:	getPageScroll()[1] + (getPageHeight() / 10),
                 left:	$(window).width() / 2 - 205
-            }).show()
+            }).show();
 
-            $(document).bind('keydown.protobox', function(e) {
-                if (e.keyCode == 27) $.protobox.close()
-                return true
-            })
-            $(document).trigger('loading.protobox')
+            $(document).observe('keypress', function(evt) {
+                if (evt.keyCode == Event.KEY_ESC) Protobox.close();
+                return true;
+            });
+            $(document).fire('protobox:loading');
         }
     }); // end of class def
 
@@ -281,9 +278,9 @@ var Protobox = null;
     Protobox.reveal = function(data, klass) {
         $(document).fire('protobox.beforeReveal');
         if (klass) $$('#protobox .content').invoke('addClassName', klass);
-        $$('#protobox .content').invoke('insert', data);
+        $('protobox-content').insert(data);
         $$('#protobox .loading').invoke('remove');
-        $$('#protobox .body').children().fadeIn('normal');
+        $('protobox-body').children().fadeIn('normal');
         $('#protobox').css('left', $(window).width() / 2 - ($('#protobox table').width() / 2))
         $(document).trigger('reveal.protobox').trigger('afterReveal.protobox')
     }
@@ -291,13 +288,14 @@ var Protobox = null;
     Protobox.close = function() {
         $(document).fire('protobox:close')
         
-        $(document).stopObserving('protobox:keydown')
+        $(document).stopObserving('keypress')
 
         $('protobox').fade();
 
-        $('#protobox .content').writeAttribute('class', 'content');
+        $('protobox-content').writeAttribute('class', 'content');
         hideOverlay();
-        $$('#protobox .loading').invoke('remove');
+        //TODO: this needs to be changed to an ID
+        $$('protobox-loading').invoke('remove');
 
         $(document).fire('protobox:afterClose');
         return false;
