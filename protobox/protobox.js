@@ -157,7 +157,7 @@ var Protobox = null;
     //     div: #id
     //   image: blah.extension
     //    ajax: anything else
-    function fillprotoboxFromHref(s, href, klass) {
+    function fillProtoboxFromHref(s, href, klass) {
 
         // div
         if (href.match(/#/)) {
@@ -168,15 +168,15 @@ var Protobox = null;
 
         // image
         } else if (href.match(s.imageTypesRegexp)) {
-            fillprotoboxFromImage(href, klass);
+            fillProtoboxFromImage(href, klass);
 
         // ajax
         } else {
-            fillprotoboxFromAjax(href, klass);
+            fillProtoboxFromAjax(href, klass);
         }
     }
 
-    function fillprotoboxFromImage(href, klass) {
+    function fillProtoboxFromImage(href, klass) {
         var image = new Image();
         image.onload = function() {
             Protobox.reveal('<div class="image"><img src="' + image.src + '" /></div>', klass);
@@ -184,7 +184,7 @@ var Protobox = null;
         image.src = href;
     }
 
-    function fillprotoboxFromAjax(href, klass) {
+    function fillProtoboxFromAjax(href, klass) {
         new Ajax.Request(href, {
             method: 'GET',
             onSuccess: function(transport) {
@@ -226,10 +226,52 @@ var Protobox = null;
         return false;
     }
 
+    function init(settings) {
+
+        if (settings.inited) return true;
+        else settings.inited = true;
+
+        Object.extend(settings, defaults);
+            
+        $(document).fire('protobox:init')
+
+        var imageTypes = settings.imageTypes.join('|');
+        settings.imageTypesRegexp = new RegExp('\.(' + imageTypes + ')$', 'i');
+        
+        $(document.body).insert(settings.protoboxHtml);
+        
+        var preload = [ new Image(), new Image() ];
+        preload[0].src = settings.closeImage;
+        preload[1].src = settings.loadingImage;
+                
+        // preloading all the background-images
+        $$('#protobox .b:first, #protobox .bl').each(function(elm) {
+            preload.push(new Image());
+            preload.last.src = elm.getStyle('background-image').replace(/url\((.+)\)/, '$1');
+        });
+
+        $$('#protobox .close').invoke('observe', 'click', Protobox.close);
+        $$('#protobox .close_image').invoke('writeAttribute', 'src', settings.closeImage);
+    }
 
 
+    function loading(s) {
+        if ($('protobox-loading')) return true; 
+        showOverlay(); 
+        $('protobox-body').childElements().invoke('hide');
+        $('protobox-body').insert('<div class="loading"><img src="' + s.loadingImage + '"/></div>');
 
+        $('protobox').setStyle({
+            top:	getPageScroll()[1] + (getPageHeight() / 10),
+            left:	$(window).width() / 2 - 205
+        }).show();
 
+        $(document).observe('keypress', function(evt) {
+            if (evt.keyCode == Event.KEY_ESC) Protobox.close();
+            return true;
+        });
+        $(document).fire('protobox:loading');
+    }
     // CLASS DEFINITION
     // the 
 
@@ -237,60 +279,63 @@ var Protobox = null;
         settings: {},
 
         initialize: function() {
-            if (arguments.length == 1) {
-                arg = arguments[0]
-                switch(typeof(arg)) {
-                    case 'string':
+            klass = null;
+            // the way this works is the actual work is done by the 1 case
+            // everything else sets some variables, then falls through to that
+            switch (arguments.length) {
+                case 3:
+                    // selector, settings, klass
+                    this.settings = arguments[1];
+                    klass = arguments[2];
+
+                case 2:
+                    arg1 = arguments[0];
+                    arg2 = arguments[1];
+
+                    // selector, settings
+                    if (typeof(arg1) === 'string' &&
+                        typeof(arg2) === 'object' &&
+                        arg2 != null) {
                         
+                        this.settings = arg2;
+                    }
+                    
+                    // settings, klass
+                    // in this case we DO NOT want to fall through
+                    if (typeof(arg1) === 'object' &&
+                        arg1 != null &&
+                        typeof(arg2) === 'string') {
 
-            this.settings = s;
+                        klass = arg2;
+                        this.settings = arg1;
+                        break;
+                    }
 
-            if (this.settings.inited) return true;
-            else this.settings.inited = true;
+                    // selector, klass
+                    if (typeof(arg1) === 'string' &&
+                        typeof(arg2) === 'string') {
 
-            Object.extend(this.settings, defaults);
-            debugger
-            
-            $(document).fire('protobox:init')
+                        klass = arg2;
+                    }
 
-            var imageTypes = this.settings.imageTypes.join('|');
-            this.settings.imageTypesRegexp = new RegExp('\.(' + imageTypes + ')$', 'i');
-        
-            $(document.body).insert(this.settings.protoboxHtml);
-        
-            var preload = [ new Image(), new Image() ];
-            preload[0].src = this.settings.closeImage;
-            preload[1].src = this.settings.loadingImage;
-                
-            // preloading all the background-images
-            $$('#protobox .b:first, #protobox .bl').each(function(elm) {
-                preload.push(new Image());
-                preload.last.src = elm.getStyle('background-image').replace(/url\((.+)\)/, '$1');
-            });
+                case 1:
+                    // selector
+                    this.watch(arguments[0], klass); 
+                    break;
+            }
 
-            $$('#protobox .close').invoke('observe', 'click', Protobox.close);
-            $$('#protobox .close_image').invoke('writeAttribute', 'src', this.settings.closeImage);
+            this.settings = init(this.settings);
+
         },
 
-        loading: function() {
-            if ($('protobox-loading')) return true;
-            showOverlay();
-
-            $('protobox-content').childElements.invoke('remove');
-            $('protobox-body').childElements().invoke('hide');
-            $('protobox-body').insert('<div class="loading"><img src="' + this.settings.loadingImage + '"/></div>');
-
-            $('protobox').setStyle({
-                top:	getPageScroll()[1] + (getPageHeight() / 10),
-                left:	$(window).width() / 2 - 205
-            }).show();
-
-            $(document).observe('keypress', function(evt) {
-                if (evt.keyCode == Event.KEY_ESC) Protobox.close();
-                return true;
+        watch: function(selector, klass) {
+            $$(selector).each(function(elm) {
+                elm.observe('click', function() {
+                    fillProtoboxFromHref(this.settings, this.href, klass);
+                });
             });
-            $(document).fire('protobox:loading');
         }
+
     }); // end of class def
 
     // STATIC METHODS
@@ -350,7 +395,7 @@ var Protobox = null;
       //var klass = this.rel.match(/protobox\[?\.(\w+)\]?/)
       //if (klass) klass = klass[1]
 
-      //fillprotoboxFromHref(this.href, klass)
+      //fillProtoboxFromHref(this.href, klass)
       //return false
     //}
 
