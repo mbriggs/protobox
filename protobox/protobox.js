@@ -1,67 +1,80 @@
-/*
- * protobox, modal popups using prototype
- * ported from the facebox jquery plugin - http://famspam.com/protobox/
+/************************************************************************
+ * protobox, modal popups using prototype                               *
+ * ported from the facebox jquery plugin - http://famspam.com/protobox/ *
+ *                                                                      *
+ * Licensed under the MIT:                                              *
+ *   http://www.opensource.org/licenses/mit-license.php                 *
+ *                                                                      *
+ * Copyright 2010 Matt Briggs [ matt@mattbriggs.net ]                   *
+ *                                                                      *
+ * origional facebox code                                               *
+ * Copyright 2007, 2008 Chris Wanstrath [ chris@ozmm.org ]              *
+ *                                                                      *
+ ************************************************************************
  *
- * Licensed under the MIT:
- *   http://www.opensource.org/licenses/mit-license.php
  *
- * Copyright 2007, 2008 Chris Wanstrath [ chris@ozmm.org ]
  *
- * TODO: write new documentation
  * Usage:
+ * ======
  *
- *  jQuery(document).ready(function() {
- *    jQuery('a[rel*=protobox]').protobox()
+ *  $(document).observe('dom:loaded', function() {
+ *      new Protobox('.protobox');
  *  })
  *
- *  <a href="#terms" rel="protobox">Terms</a>
+ *  <a href="#terms" class="protobox">Terms</a>
  *    Loads the #terms div in the box
  *
- *  <a href="terms.html" rel="protobox">Terms</a>
+ *  <a href="terms.html" class="protobox">Terms</a>
  *    Loads the terms.html page in the box
  *
- *  <a href="terms.png" rel="protobox">Terms</a>
+ *  <a href="terms.png" class="protobox">Terms</a>
  *    Loads the terms.png image in the box
  *
  *
  *  You can also use it programmatically:
+ *  =====================================
  *
- *    jQuery.protobox('some html')
- *    jQuery.protobox('some html', 'my-groovy-style')
+ *    Protobox.box('some html')
+ *    Protobox.box('some html', 'my-groovy-style')
  *
- *  The above will open a protobox with "some html" as the content.
+ *  The above open a protobox with "some html" as the content.
  *
- *    jQuery.protobox(function($) {
- *      $.get('blah.html', function(data) { $.protobox(data) })
+ *    Protobox.box(function() {
+ *      Ajax.Request('blah.html', { 
+ *          method: 'get',
+ *          onSuccess: function(transport) { 
+ *              $.protobox(transport.requestText); 
+ *          }
+ *      });
  *    })
  *
  *  The above will show a loading screen before the passed function is called,
  *  allowing for a better ajaxy experience.
  *
- *  The protobox function can also display an ajax page, an image, or the contents of a div:
+ *  The box function can also display an ajax page, an image, or the contents of a div:
  *
- *    jQuery.protobox({ ajax: 'remote.html' })
- *    jQuery.protobox({ ajax: 'remote.html' }, 'my-groovy-style')
- *    jQuery.protobox({ image: 'stairs.jpg' })
- *    jQuery.protobox({ image: 'stairs.jpg' }, 'my-groovy-style')
- *    jQuery.protobox({ div: '#box' })
- *    jQuery.protobox({ div: '#box' }, 'my-groovy-style')
+ *    Protobox.box({ ajax: 'remote.html' })
+ *    Protobox.box({ ajax: 'remote.html' }, 'my-groovy-style')
+ *    Protobox.box({ image: 'stairs.jpg' })
+ *    Protobox.box({ image: 'stairs.jpg' }, 'my-groovy-style')
+ *    Protobox.box({ div: '#box' })
+ *    Protobox.box({ div: '#box' }, 'my-groovy-style')
  *
- *  Want to close the protobox?  Trigger the 'close.protobox' document event:
+ *  Want to close the protobox? Fire the 'protobox:close' document event:
  *
- *    jQuery(document).trigger('close.protobox')
+ *    $(document).fire('protobox:close')
  *
  *  protobox also has a bunch of other hooks:
  *
- *    loading.protobox
- *    beforeReveal.protobox
- *    reveal.protobox (aliased as 'afterReveal.protobox')
- *    init.protobox
- *    afterClose.protobox
+ *    protobox:loading
+ *    protobox:beforeReveal
+ *    protobox:reveal (aliased as 'protobox:afterReveal')
+ *    protobox:init
+ *    protobox:afterClose
  *
- *  Simply bind a function to any of these hooks:
+ *  Simply observe any of these hooks:
  *
- *   $(document).bind('reveal.protobox', function() { ...stuff to do after the protobox and contents are revealed... })
+ *   $(document).observe('protobox:reveal', function() { ...stuff to do after the protobox and contents are revealed... })
  *
  */
 
@@ -215,18 +228,28 @@ var Protobox = null;
 
 
 
+
+
     // CLASS DEFINITION
+    // the 
 
     Protobox = Class.create({
         settings: {},
 
-        initialize: function(s) {
+        initialize: function() {
+            if (arguments.length == 1) {
+                arg = arguments[0]
+                switch(typeof(arg)) {
+                    case 'string':
+                        
+
             this.settings = s;
 
             if (this.settings.inited) return true;
             else this.settings.inited = true;
 
-            Object.extend(defaults, this.settings);
+            Object.extend(this.settings, defaults);
+            debugger
             
             $(document).fire('protobox:init')
 
@@ -247,12 +270,9 @@ var Protobox = null;
 
             $$('#protobox .close').invoke('observe', 'click', Protobox.close);
             $$('#protobox .close_image').invoke('writeAttribute', 'src', this.settings.closeImage);
-        }
-
-
+        },
 
         loading: function() {
-            init();
             if ($('protobox-loading')) return true;
             showOverlay();
 
@@ -275,6 +295,17 @@ var Protobox = null;
 
     // STATIC METHODS
 
+    Protobox.box = function(data, klass) {
+
+    $.facebox.loading()
+
+    if (data.ajax) fillFaceboxFromAjax(data.ajax, klass)
+    else if (data.image) fillFaceboxFromImage(data.image, klass)
+    else if (data.div) fillFaceboxFromHref(data.div, klass)
+    else if ($.isFunction(data)) data.call($)
+    else $.facebox.reveal(data, klass)
+    }
+
     Protobox.reveal = function(data, klass) {
         $(document).fire('protobox.beforeReveal');
         if (klass) $$('#protobox .content').invoke('addClassName', klass);
@@ -295,7 +326,7 @@ var Protobox = null;
         $('protobox-content').writeAttribute('class', 'content');
         hideOverlay();
         //TODO: this needs to be changed to an ID
-        $$('protobox-loading').invoke('remove');
+        $('protobox-loading').remove();
 
         $(document).fire('protobox:afterClose');
         return false;
