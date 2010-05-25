@@ -104,7 +104,7 @@ var Protobox = null;
         opacity        : 0.20, // this also needs to change in the css
         loadingImage   : 'images/protobox/loading.gif',
         closeImage     : 'images/protobox/closelabel.gif',
-        animationSpeed : 0.5, 
+        animationSpeed : 0.4, 
         imageTypes     : [ 'png', 'jpg', 'jpeg', 'gif' ],
         protoboxHtml   : '\
     <div id="protobox" style="display:none;"> \
@@ -413,8 +413,6 @@ var Protobox = null;
         settings = {};
         loading(settings);
 
-        debugger
-
         if (data.ajax) fillProtoboxFromAjax(data.ajax, klass)
         else if (data.image) fillProtoboxFromImage(data.image, klass)
         else if (data.div) fillProtoboxFromHref(data.div, klass)
@@ -424,8 +422,8 @@ var Protobox = null;
 
     Protobox.reveal = function(data, klass) {
         $(document).fire('protobox.beforeReveal');
-        if (klass) $$('protobox-content').invoke('addClassName', klass);
-        $('protobox-content').insert(data);
+        if (klass) $('protobox-content').addClassName(klass);
+        $('protobox-content').update(data);
         if ($('protobox-loading')) $('protobox-loading').remove();
         // bug
         $('protobox-body').childElements().invoke('appear');
