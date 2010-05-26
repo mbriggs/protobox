@@ -94,7 +94,6 @@
 
 
 var Protobox = null;
-
 (function() {
 
     // DEFAULTS
@@ -221,10 +220,15 @@ var Protobox = null;
 
         // div
         if (href.match(/#/)) {
+            // support for www.full.url.com#anchor
             var url    = window.location.href.split('#')[0];
             var target = href.replace(url,'');
             if (target == '#') return;
-            Protobox.reveal($(target).html(), klass);
+            // strip the leading #
+            if (target.substr(0, 1) == '#') target = target.substr(1);
+
+            if ($(target))
+                Protobox.reveal($(target).innerHTML, klass);
 
         // image
         } else if (href.match(s.imageTypesRegexp)) {
@@ -288,23 +292,23 @@ var Protobox = null;
         return false;
     }
 
-    function init(settings) {
+    function init(s) {
 
-        if (settings.inited) return true;
-        else settings.inited = true;
+        if (s.inited) return true;
+        else s.inited = true;
 
-        Object.extend(settings, defaults);
+        Object.extend(s, defaults);
             
         $(document).fire('protobox:init')
 
-        var imageTypes = settings.imageTypes.join('|');
-        settings.imageTypesRegexp = new RegExp('\.(' + imageTypes + ')$', 'i');
+        var imageTypes = s.imageTypes.join('|');
+        s.imageTypesRegexp = new RegExp('\.(' + imageTypes + ')$', 'i');
         
-        $(document.body).insert(settings.protoboxHtml);
+        $(document.body).insert(s.protoboxHtml);
         
         var preload = [ new Image(), new Image() ];
-        preload[0].src = settings.closeImage;
-        preload[1].src = settings.loadingImage;
+        preload[0].src = s.closeImage;
+        preload[1].src = s.loadingImage;
                 
         // preloading all the background-images
         $$('#protobox .b:first, #protobox .bl').each(function(elm) {
@@ -313,9 +317,9 @@ var Protobox = null;
         });
 
         $$('#protobox .close').invoke('observe', 'click', Protobox.close);
-        $$('#protobox .close_image').invoke('writeAttribute', 'src', settings.closeImage);
+        $$('#protobox .close_image').invoke('writeAttribute', 'src', s.closeImage);
 
-        return settings;
+        return s;
     }
 
 
@@ -415,7 +419,7 @@ var Protobox = null;
 
         if (data.ajax) fillProtoboxFromAjax(data.ajax, klass)
         else if (data.image) fillProtoboxFromImage(data.image, klass)
-        else if (data.div) fillProtoboxFromHref(data.div, klass)
+        else if (data.div) fillProtoboxFromHref(settings, data.div, klass)
         else if (Object.isFunction(data)) data.call($)
         else Protobox.reveal(data, klass)
     }
