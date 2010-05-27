@@ -97,13 +97,12 @@ var Protobox = null;
 (function() {
 
     // DEFAULTS
-    
     var defaults = {
         overlay        : true,
-        opacity        : 0.20, // this also needs to change in the css
+        opacity        : 0.30, // this also needs to change in the css
         loadingImage   : 'images/protobox/loading.gif',
         closeImage     : 'images/protobox/closelabel.gif',
-        animationSpeed : 0.4, 
+        animationSpeed : 0.3, 
         imageTypes     : [ 'png', 'jpg', 'jpeg', 'gif' ],
         protoboxHtml   : '\
     <div id="protobox" style="display:none;"> \
@@ -116,14 +115,10 @@ var Protobox = null;
             <tr> \
               <td class="b"/> \
               <td id="protobox-body"> \
-                <div id="protobox-header" class="protobox-add-content"> \
-                  <a href="#" class="close"> \
-                    <img src="protobox/closelabel.gif" title="close" class="close_image" /> \
-                  </a> \
-                </div> \
+                <a href="#" class="close"> \
+                  <img src="images/protobox/closelabel.gif" title="close" id="protobox-close-image" /> \
+                </a> \
                 <div id="protobox-content"> \
-                </div> \
-                <div id="protobox-footer" class="protobox-add-content"> \
                 </div> \
               </td> \
               <td class="b"/> \
@@ -136,6 +131,124 @@ var Protobox = null;
       </div> \
     </div>'
     };
+
+
+    // CLASS DEFINITION
+
+    Protobox = Class.create({
+        settings: {},
+
+        initialize: function() {
+            klass = null;
+            // the way this works is the actual work is done by the 1 case
+            // everything else sets some variables, then falls through to that
+            switch (arguments.length) {
+                case 3:
+                    // selector, settings, klass
+                    this.settings = arguments[1];
+                    klass = arguments[2];
+
+                case 2:
+                    arg1 = arguments[0];
+                    arg2 = arguments[1];
+
+                    // selector, settings
+                    if (typeof(arg1) === 'string' &&
+                        typeof(arg2) === 'object' &&
+                        arg2 != null) {
+                        
+                        this.settings = arg2;
+                    }
+                    
+                    // settings, klass
+                    // in this case we DO NOT want to fall through
+                    if (typeof(arg1) === 'object' &&
+                        arg1 != null &&
+                        typeof(arg2) === 'string') {
+
+                        klass = arg2;
+                        this.settings = arg1;
+                        break;
+                    }
+
+                    // selector, klass
+                    if (typeof(arg1) === 'string' &&
+                        typeof(arg2) === 'string') {
+
+                        klass = arg2;
+                    }
+
+                case 1:
+                    // selector
+                    this.watch(arguments[0], klass); 
+                    break;
+            }
+
+            this.settings = init(this.settings);
+
+        },
+
+        watch: function(selector, klass) {
+            $$(selector).each(function(elm) {
+                elm.observe('click', function() {
+                    fillProtoboxFromHref(this.settings, this.href, klass);
+                });
+            });
+        },
+
+        stopWatching: function(selector) {
+            $$(selector).invoke('stopObserving', 'click');
+        }
+
+    }); // end of class def
+
+    // STATIC METHODS
+
+    Protobox.box = function(data, klass) {
+        settings = {};
+        loading(settings);
+
+        if (data.ajax) fillProtoboxFromAjax(data.ajax, klass)
+        else if (data.image) fillProtoboxFromImage(data.image, klass)
+        else if (data.div) fillProtoboxFromHref(settings, data.div, klass)
+        else if (Object.isFunction(data)) data.call($)
+        else Protobox.reveal(data, klass)
+    }
+
+    Protobox.reveal = function(data, klass) {
+        $(document).fire('protobox.beforeReveal');
+
+        if (klass) $('protobox-content').addClassName(klass);
+        $('protobox-content').update(data);
+
+        if ($('protobox-loading')) $('protobox-loading').remove();
+        
+        $('protobox-body').childElements().invoke('appear', { duration: defaults.animationSpeed });
+
+        $(document).fire('protobox:reveal');
+        $(document).fire('protobox:afterReveal');
+    }
+
+    Protobox.close = function(settings) {
+        if (!settings) settings = {}
+        if (!settings.inited) settings = init(settings);
+        $(document).fire('protobox:close')
+        
+        $(document).stopObserving('keypress');
+        $('protobox-overlay').stopObserving('click');
+
+        $('protobox').fade({ duration: settings.animationSpeed, from: settings.opacity, 
+            afterFinish: function() {
+                $('protobox-content').writeAttribute('class', 'content');
+            } 
+        });
+
+        hideOverlay(settings);
+        if ($('protobox-loading')) $('protobox-loading').remove();
+
+        $(document).fire('protobox:afterClose');
+        return false;
+    }
 
     // PRIVATE METHODS
 
@@ -153,19 +266,6 @@ var Protobox = null;
             xScroll = document.body.scrollLeft;
         }
         return [xScroll, yScroll];
-    }
-
-    // Adapted from getPageSize() by quirksmode.com
-    function getPageHeight() {
-        var windowHeight;
-        if (window.innerHeight) {  // all except Explorer
-            windowHeight = window.innerHeight;
-        } else if (document.documentElement && document.documentElement.clientHeight) {  // Explorer 6 Strict Mode
-            windowHeight = document.documentElement.clientHeight;
-        } else if (document.body) { // other Explorers
-            windowHeight = document.body.clientHeight;
-        }
-        return windowHeight;
     }
 
     var WindowSize = {
@@ -264,18 +364,21 @@ var Protobox = null;
     function showOverlay(s) {
         if (skipOverlay(s)) return
 
-        if ($('protobox_overlay') == null) {
-            $(document.body).insert('<div id="protobox_overlay" class="protobox_hide"></div>');
+        if ($('protobox-overlay') == null) {
+            $(document.body).insert('<div id="protobox-overlay"></div>');
         }
-        $('protobox_overlay').hide()
-            .addClassName("protobox_overlayBG")
+        $('protobox-overlay').hide()
+            .addClassName("protobox-overlayBG")
             .observe('click', function() { 
                     $(document).fire('protobox:close'); 
             }).show();
 
-        new Effect.Opacity('protobox_overlay', { duration: s.animationSpeed, 
+        new Effect.Opacity('protobox-overlay', { duration: s.animationSpeed, 
                                                  from: 0,
                                                  to: s.opacity });
+        $('protobox-overlay').observe('click', function() {
+            Protobox.close();
+        });
 
         return false;
     }
@@ -283,11 +386,10 @@ var Protobox = null;
     function hideOverlay(s) {
         if (skipOverlay(s)) return;
 
-        $('protobox_overlay').fade(s.animationSpeed, { from: s.opacity });
-
-        $("protobox_overlay").removeClassName("protobox_overlayBG");
-        $("protobox_overlay").addClassName("protobox_hide");
-        $("protobox_overlay").remove();
+        $('protobox-overlay').fade({ duration: s.animationSpeed, from: s.opacity, afterFinish: function() {
+                $("protobox-overlay").remove();
+            } 
+        });
 
         return false;
     }
@@ -304,7 +406,7 @@ var Protobox = null;
         var imageTypes = s.imageTypes.join('|');
         s.imageTypesRegexp = new RegExp('\.(' + imageTypes + ')$', 'i');
         
-        $(document.body).insert(s.protoboxHtml);
+        if ($('protobox') == null) $(document.body).insert(s.protoboxHtml);
         
         var preload = [ new Image(), new Image() ];
         preload[0].src = s.closeImage;
@@ -317,7 +419,7 @@ var Protobox = null;
         });
 
         $$('#protobox .close').invoke('observe', 'click', Protobox.close);
-        $$('#protobox .close_image').invoke('writeAttribute', 'src', s.closeImage);
+        $('protobox-close-image').writeAttribute('src', s.closeImage);
 
         return s;
     }
@@ -331,7 +433,7 @@ var Protobox = null;
         $('protobox-body').insert('<div id="protobox-loading"><img src="' + s.loadingImage + '"/></div>');
 
         $('protobox').setStyle({
-            top:    (getPageScroll()[1] + (getPageHeight() / 10)) + 'px',
+            top:    (getPageScroll()[1] + (WindowSize.height() / 10)) + 'px',
             left:   (WindowSize.width() / 2 - 205) + 'px'
         }).show();
 
@@ -341,139 +443,4 @@ var Protobox = null;
         });
         $(document).fire('protobox:loading');
     }
-    // CLASS DEFINITION
-    // the 
-
-    Protobox = Class.create({
-        settings: {},
-
-        initialize: function() {
-            klass = null;
-            // the way this works is the actual work is done by the 1 case
-            // everything else sets some variables, then falls through to that
-            switch (arguments.length) {
-                case 3:
-                    // selector, settings, klass
-                    this.settings = arguments[1];
-                    klass = arguments[2];
-
-                case 2:
-                    arg1 = arguments[0];
-                    arg2 = arguments[1];
-
-                    // selector, settings
-                    if (typeof(arg1) === 'string' &&
-                        typeof(arg2) === 'object' &&
-                        arg2 != null) {
-                        
-                        this.settings = arg2;
-                    }
-                    
-                    // settings, klass
-                    // in this case we DO NOT want to fall through
-                    if (typeof(arg1) === 'object' &&
-                        arg1 != null &&
-                        typeof(arg2) === 'string') {
-
-                        klass = arg2;
-                        this.settings = arg1;
-                        break;
-                    }
-
-                    // selector, klass
-                    if (typeof(arg1) === 'string' &&
-                        typeof(arg2) === 'string') {
-
-                        klass = arg2;
-                    }
-
-                case 1:
-                    // selector
-                    this.watch(arguments[0], klass); 
-                    break;
-            }
-
-            this.settings = init(this.settings);
-
-        },
-
-        watch: function(selector, klass) {
-            $$(selector).each(function(elm) {
-                elm.observe('click', function() {
-                    fillProtoboxFromHref(this.settings, this.href, klass);
-                });
-            });
-        },
-
-        stopWatching: function(selector) {
-            $$(selector).invoke('stopObserving', 'click');
-        }
-
-    }); // end of class def
-
-    // STATIC METHODS
-
-    Protobox.box = function(data, klass) {
-        settings = {};
-        loading(settings);
-
-        if (data.ajax) fillProtoboxFromAjax(data.ajax, klass)
-        else if (data.image) fillProtoboxFromImage(data.image, klass)
-        else if (data.div) fillProtoboxFromHref(settings, data.div, klass)
-        else if (Object.isFunction(data)) data.call($)
-        else Protobox.reveal(data, klass)
-    }
-
-    Protobox.reveal = function(data, klass) {
-        $(document).fire('protobox.beforeReveal');
-        if (klass) $('protobox-content').addClassName(klass);
-        $('protobox-content').update(data);
-        if ($('protobox-loading')) $('protobox-loading').remove();
-        // bug
-        $('protobox-body').childElements().invoke('appear');
-        $(document).fire('protobox:reveal');
-        $(document).fire('protobox:afterReveal');
-    }
-
-    Protobox.close = function(settings) {
-        if (!settings) settings = {}
-        if (!settings.inited) settings = init(settings);
-        $(document).fire('protobox:close')
-        
-        $(document).stopObserving('keypress')
-
-        $('protobox').fade(settings.animationSpeed, { from: settings.opacity });
-
-        $('protobox-content').writeAttribute('class', 'content');
-        hideOverlay(settings);
-        if ($('protobox-loading')) $('protobox-loading').remove();
-
-        $(document).fire('protobox:afterClose');
-        return false;
-    }
 })(); // end of scope
-
-  /*
-   * Public, $.fn methods
-   */
-
-  //$.fn.protobox = function(settings) {
-    //if ($(this).length == 0) return
-
-    //init(settings)
-
-    //function clickHandler() {
-      //$.protobox.loading(true)) {
-
-      //// support for rel="protobox.inline_popup" syntax, to add a class
-      //// also supports deprecated "protobox[.inline_popup]" syntax
-      //var klass = this.rel.match(/protobox\[?\.(\w+)\]?/)
-      //if (klass) klass = klass[1]
-
-      //fillProtoboxFromHref(this.href, klass)
-      //return false
-    //}
-
-    //return this.bind('click.protobox', clickHandler)
-  //}
-

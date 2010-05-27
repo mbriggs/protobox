@@ -21,7 +21,8 @@ a:hover {
 
 p {
   font-size: 12px;
-  margin: 10px 0;
+  margin: 15px;
+  float: left;
 }
 
 ul li {
