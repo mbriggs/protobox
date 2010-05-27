@@ -1,0 +1,91 @@
+origionally based on http://famspam.com/facebox/
+
+This is a port of the great facebox jquery plugin to prototype.
+
+NOTE: this is still in fairly early stages. The programmatic api seems to work fine, but the OO api is still completely untested
+
+There are two ways to use this script. First is object oriented. You can access this api by instanciating a new instance of Protobox. You want to use this when you want to do a one off "every link with this class should become a modal popup" type thing, or when you want to specify some custom settings, and have the object around to watch or stop watching specific dom elements.
+
+The other way is programmatically. You want to use this when you want to incorporate this plugin into your own scripts, and just need to be able to programmatically show or hide something in a modal popup.
+
+Object Oriented Usage:
+======================
+
+ $(document).observe('dom:loaded', function() {
+     var proto = new Protobox('.protobox');
+ })
+
+ <a href="#terms" class="protobox">Terms</a>
+   Loads the #terms div in the box
+
+ <a href="terms.html" class="protobox">Terms</a>
+   Loads the terms.html page in the box
+
+ <a href="terms.png" class="protobox">Terms</a>
+   Loads the terms.png image in the box
+
+ You can also use .watch(selector) or .stopWatching(selector)
+
+ full constructor signature is : 
+     new Protobox(selector, settings, customClassToApplyToContent);
+
+ default settings are *
+     opacity      : 0,
+     overlay      : true,
+     loadingImage : 'images/protobox/loading.gif',
+     closeImage   : 'images/protobox/closelabel.gif',
+     imageTypes   : [ 'png', 'jpg', 'jpeg', 'gif' ],
+
+ all constructor arguments are optional
+
+
+ You can also use it programmatically:
+ =====================================
+
+   Protobox.box('some html')
+   Protobox.box('some html', 'my-groovy-style')
+
+ The above open a protobox with "some html" as the content.
+
+   Protobox.box(function() {
+     Ajax.Request('blah.html', { 
+         method: 'get',
+         onSuccess: function(transport) { 
+             $.protobox(transport.requestText); 
+         }
+     });
+   })
+
+ The above will show a loading screen before the passed function is called,
+ allowing for a better ajaxy experience.
+
+ The box function can also display an ajax page, an image, or the contents of a div:
+
+   Protobox.box({ ajax: 'remote.html' })
+   Protobox.box({ ajax: 'remote.html' }, 'my-groovy-style')
+   Protobox.box({ image: 'stairs.jpg' })
+   Protobox.box({ image: 'stairs.jpg' }, 'my-groovy-style')
+   Protobox.box({ div: '#box' })
+   Protobox.box({ div: '#box' }, 'my-groovy-style')
+
+ Want to close the protobox? Fire the 'protobox:close' document event:
+
+   $(document).fire('protobox:close')
+
+ protobox also has a bunch of other hooks:
+
+   protobox:loading
+   protobox:beforeReveal
+   protobox:reveal (aliased as 'protobox:afterReveal')
+   protobox:init
+   protobox:afterClose
+
+ Simply observe any of these hooks:
+
+  $(document).observe('protobox:reveal', function() { ...stuff to do after the protobox and contents are revealed... })
+
+
+Dev Notes
+=========
+
+ So I am a ruby guy, because of that, you will see some ruby infrastructure stuff in here. There first is using Rake (make for ruby) to do packaging/minification. To use this yourself, you will need to install ruby and rake on your given platform. The second is server.rb. This is there, because when you load an html file off of the harddrive, webkit seems to report back inconsistant "domains", which triggers some anti-csrf code that is in prototype. All server.rb does is launch a webserver for the current directory, hosted at port 2000. Any webserver will do, but you need something, or the ajax tests wont work. The last bit has nothing to do with ruby, but I am using YUI compressor to minify everything, so if you want to be able to do that, you will need java properly set up (if its in your path and you have rake installed, rake minify will (re)create protobox.min.js and protobox.min.css, and rake package will first minify, then build packes in the pkg directory.)
