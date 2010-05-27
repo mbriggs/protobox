@@ -208,14 +208,14 @@ var Protobox = null;
         settings = {};
         loading(settings);
 
-        if (data.ajax) fillProtoboxFromAjax(data.ajax, klass)
-        else if (data.image) fillProtoboxFromImage(data.image, klass)
+        if (data.ajax) fillProtoboxFromAjax(settings, data.ajax, klass)
+        else if (data.image) fillProtoboxFromImage(settings, data.image, klass)
         else if (data.div) fillProtoboxFromHref(settings, data.div, klass)
         else if (Object.isFunction(data)) data.call($)
-        else Protobox.reveal(data, klass)
+        else Protobox.reveal(settings, data, klass)
     }
 
-    Protobox.reveal = function(data, klass) {
+    Protobox.reveal = function(s, data, klass) {
         $(document).fire('protobox.beforeReveal');
 
         if (klass) $('protobox-content').addClassName(klass);
@@ -223,7 +223,7 @@ var Protobox = null;
 
         if ($('protobox-loading')) $('protobox-loading').remove();
         
-        $('protobox-body').childElements().invoke('appear', { duration: defaults.animationSpeed });
+        $('protobox-body').childElements().invoke('appear', { duration: s.animationSpeed });
 
         $(document).fire('protobox:reveal');
         $(document).fire('protobox:afterReveal');
@@ -328,31 +328,31 @@ var Protobox = null;
             if (target.substr(0, 1) == '#') target = target.substr(1);
 
             if ($(target))
-                Protobox.reveal($(target).innerHTML, klass);
+                Protobox.reveal(s, $(target).innerHTML, klass);
 
         // image
         } else if (href.match(s.imageTypesRegexp)) {
-            fillProtoboxFromImage(href, klass);
+            fillProtoboxFromImage(s, href, klass);
 
         // ajax
         } else {
-            fillProtoboxFromAjax(href, klass);
+            fillProtoboxFromAjax(s, href, klass);
         }
     }
 
-    function fillProtoboxFromImage(href, klass) {
+    function fillProtoboxFromImage(s, href, klass) {
         var image = new Image();
         image.onload = function() {
-            Protobox.reveal('<div class="image"><img src="' + image.src + '" /></div>', klass);
+            Protobox.reveal(s, '<div class="image"><img src="' + image.src + '" /></div>', klass);
         }
         image.src = href;
     }
 
-    function fillProtoboxFromAjax(href, klass) {
+    function fillProtoboxFromAjax(s, href, klass) {
         new Ajax.Request(href, {
             method: 'GET',
             onSuccess: function(transport) {
-                Protobox.reveal(transport.responseText, klass);
+                Protobox.reveal(s, transport.responseText, klass);
             }
         });
     }
@@ -418,7 +418,6 @@ var Protobox = null;
             preload.last.src = elm.getStyle('background-image').replace(/url\((.+)\)/, '$1');
         });
 
-        $$('#protobox .close').invoke('observe', 'click', Protobox.close);
         $('protobox-close-image').writeAttribute('src', s.closeImage);
 
         return s;
