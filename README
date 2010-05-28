@@ -2,8 +2,6 @@ origionally based on http://famspam.com/facebox/
 
 This is a port of the great facebox jquery plugin to prototype.
 
-NOTE: this is still in fairly early stages. The programmatic api seems to work fine, but the OO api is still completely untested
-
 There are two ways to use this script. First is object oriented. You can access this api by instanciating a new instance of Protobox. You want to use this when you want to do a one off "every link with this class should become a modal popup" type thing, or when you want to specify some custom settings, and have the object around to watch or stop watching specific dom elements.
 
 The other way is programmatically. You want to use this when you want to incorporate this plugin into your own scripts, and just need to be able to programmatically show or hide something in a modal popup.

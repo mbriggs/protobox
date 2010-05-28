@@ -21,6 +21,14 @@
                 height: 100px;
             }
         </style>
+
+        <script language='javascript' type='text/javascript'>
+            var pb = null;
+
+            function bySelector() {
+                pb = new Protobox('a.by-selector');
+            }
+        </script>
     </head>
 
     <body>
@@ -44,6 +52,20 @@
 
             <br />
 
+        </p>
+
+        <p>
+            <strong>new Protobox() tests</strong><br />
+            <a href='javascript: bySelector();'>this should attach on to all three demo links</a><br /><br />
+            <a href='#box' class='by-selector'>div demo</a><br />
+            <a href='remote.html' class='by-selector'>ajax demo</a><br />
+            <a href='stairs.jpg' class='by-selector'>image demo</a><br />
+        </p> 
+
+        <p>
+            <strong>pb.watch tests <br />(make sure you run the new tests first)</strong><br />
+            <a href='javascript: pb.stopWatching("a.by-selector");'>disable previous three demo links</a><br />
+            <a href='javascript: pb.watch("a.by-selector");'>enable previous three demo links</a><br />
         </p>
 
         <br style='clear: both' />

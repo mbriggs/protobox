@@ -134,6 +134,11 @@ var Protobox = null;
 
 
     // CLASS DEFINITION
+    var clickHandler = function(evt) {
+        loading(that.settings);
+        fillProtoboxFromHref(that.settings, this.href, klass);
+        evt.stop();
+    };
 
     Protobox = Class.create({
         settings: {},
@@ -180,24 +185,22 @@ var Protobox = null;
 
                 case 1:
                     // selector
+                    this.settings = init(this.settings);
                     this.watch(arguments[0], klass); 
                     break;
             }
-
-            this.settings = init(this.settings);
-
         },
 
         watch: function(selector, klass) {
+            that = this;
+            this.stopWatching(selector);
             $$(selector).each(function(elm) {
-                elm.observe('click', function() {
-                    fillProtoboxFromHref(this.settings, this.href, klass);
-                });
+                elm.observe('click', clickHandler);
             });
         },
 
         stopWatching: function(selector) {
-            $$(selector).invoke('stopObserving', 'click');
+            $$(selector).invoke('stopObserving', 'click', clickHandler);
         }
 
     }); // end of class def
@@ -396,7 +399,7 @@ var Protobox = null;
 
     function init(s) {
 
-        if (s.inited) return true;
+        if (s.inited) return s;
         else s.inited = true;
 
         Object.extend(s, defaults);
