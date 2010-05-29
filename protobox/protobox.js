@@ -221,6 +221,16 @@ var Protobox = null;
     Protobox.reveal = function(s, data, klass) {
         $(document).fire('protobox.beforeReveal');
 
+        var width = getContentWidth(data) + 40;
+        
+        // 40 == padding and borders
+        // 205 = default width
+        if (width > 205) {
+            var left = (WindowSize.width() / 2) - (width / 2);
+            $('protobox').setStyle({ width: width + 'px', left: left + 'px'});
+            //$('protobox').morph({ style: 'width: ' + width + 'px; left: ' + left + 'px;', duration: s.animationSpeed});
+        }
+
         if (klass) $('protobox-content').addClassName(klass);
         $('protobox-content').update(data);
 
@@ -254,6 +264,17 @@ var Protobox = null;
     }
 
     // PRIVATE METHODS
+
+    function getContentWidth(html) {
+        var style = 'float: left !important; visibility: hidden !important; border: 0px !important; margin: 0px !important; padding: 0px !important;';
+        var data = "<div id='proto-temp-content' style='" + style + "'>" + html + "</div>";
+        $(document.body).insert(data);
+        var content = $('proto-temp-content');
+        var width = content.offsetWidth;
+        content.remove();
+        return width;
+    }
+
 
     // getPageScroll() by quirksmode.com
     function getPageScroll() {
@@ -425,7 +446,6 @@ var Protobox = null;
 
         return s;
     }
-
 
     function loading(s) {
         s = init(s);
