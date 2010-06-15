@@ -220,8 +220,12 @@ var Protobox = null;
 
     Protobox.reveal = function(s, data, klass) {
         $(document).fire('protobox.beforeReveal');
+        var content = $('protobox-content');
 
         var width = getContentWidth(data) + 40;
+        var maxWidth = WindowSize.width() - 40;
+
+        if (width > maxWidth) width = maxWidth;
         
         // 40 == padding and borders
         // 205 = default width
@@ -231,8 +235,9 @@ var Protobox = null;
             //$('protobox').morph({ style: 'width: ' + width + 'px; left: ' + left + 'px;', duration: s.animationSpeed});
         }
 
-        if (klass) $('protobox-content').addClassName(klass);
-        $('protobox-content').update(data);
+        if (klass) content.addClassName(klass);
+        content.setStyle({ "max-width": maxWidth + 'px' });
+        content.update(data);
 
         if ($('protobox-loading')) $('protobox-loading').remove();
         

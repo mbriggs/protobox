@@ -53,7 +53,7 @@
 #protobox-body {
   padding: 10px;
   background: #fff;
-  width: 370px;
+  min-width: 370px;
 }
 
 #protobox .image {
